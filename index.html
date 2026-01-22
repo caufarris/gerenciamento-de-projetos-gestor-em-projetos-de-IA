@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Interativo: O Gerente de Projetos de IA</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Warm Neutral Harmony -->
+    <!-- Application Structure Plan: The application uses a top-level tabbed navigation ('Habilidades', 'Tecnologias') to separate the two core concepts of the report, enabling non-linear user exploration. The 'Habilidades' section uses a three-column card layout and an interactive radar chart to visually represent the required skill balance. The 'Tecnologias' section uses nested tabs for its sub-categories, employing varied visualizations like bar charts (Linguagens) and comparison grids (Cloud/MLOps) to present information digestibly. This structure prioritizes user interaction and data synthesis over the linear format of the original report, making complex relationships easier to grasp. -->
+    <!-- Visualization & Content Choices: Report Info: Skill categories -> Goal: Compare balance -> Viz: Radar Chart (Chart.js) -> Interaction: Hover tooltips -> Justification: Visually represents the need for a holistic skillset, more impactful than a list. Report Info: Language popularity -> Goal: Compare dominance -> Viz: Bar Chart (Chart.js) -> Interaction: Clickable bars to show details -> Justification: Standard, clear method for ranked data. Report Info: Cloud platforms -> Goal: Compare -> Viz: HTML comparison grid -> Justification: Direct feature comparison. All details are presented in modals/expandable cards to maintain a clean UI, following progressive disclosure principles. NO SVG/Mermaid confirmed. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F8F7F4;
+            color: #2c3e50;
+        }
+        .nav-button {
+            transition: all 0.3s ease;
+            border-bottom: 2px solid transparent;
+        }
+        .nav-button.active {
+            color: #3B82F6;
+            border-bottom-color: #3B82F6;
+        }
+        .tech-nav-button.active {
+            background-color: #3B82F6;
+            color: white;
+        }
+        .chart-container {
+            position: relative;
+            margin: auto;
+            height: 40vh;
+            width: 90%;
+            max-width: 500px;
+            max-height: 400px;
+        }
+        .card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .modal {
+            transition: opacity 0.3s ease;
+        }
+        .fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+    </style>
+</head>
+<body class="antialiased">
+    <div id="app" class="container mx-auto p-4 md:p-8">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-800">O Gerente de Projetos de IA Moderno</h1>
+            <p class="text-lg text-gray-600 mt-2 max-w-3xl mx-auto">Uma exploração interativa das habilidades essenciais e tecnologias dominantes que definem o sucesso na gestão de projetos de Inteligência Artificial.</p>
+        </header>
+
+        <nav class="flex justify-center border-b border-gray-200 mb-8">
+            <button id="skills-nav" class="nav-button active text-lg font-medium py-4 px-6">Habilidades Essenciais</button>
+            <button id="tech-nav" class="nav-button text-lg font-medium py-4 px-6">Tecnologias Dominantes</button>
+        </nav>
+
+        <main>
+            <div id="skills-content">
+                <div class="text-center mb-12">
+                     <p class="text-base text-gray-600 max-w-4xl mx-auto">A gestão de projetos de IA exige uma amálgama de competências que transcende o escopo tradicional. O sucesso depende de um equilíbrio entre o domínio dos fundamentos da gestão, a fluência em conceitos técnicos de IA e um conjunto robusto de habilidades interpessoais. Esta seção detalha essas três áreas cruciais, e o gráfico de radar abaixo ilustra a importância de uma abordagem holística e integrada para o desenvolvimento profissional do GP de IA.</p>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                    <div class="chart-container h-80 md:h-96">
+                        <canvas id="skillsRadarChart"></canvas>
+                    </div>
+                    <div class="flex flex-col space-y-4">
+                         <div class="bg-white p-6 rounded-xl shadow-md border border-gray-100">
+                            <h3 class="font-bold text-xl text-gray-800">Pilares do GP de IA</h3>
+                            <p class="text-gray-600 mt-2">O gráfico de radar visualiza as três macro-áreas de competência para um GP de IA. Cada eixo representa uma área de habilidade, e um perfil ideal se aproxima de uma cobertura equilibrada de todas as áreas, demonstrando a necessidade de um profissional completo e versátil.</p>
+                        </div>
+                    </div>
+                </div>
+                <div id="skills-grid" class="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+            </div>
+
+            <div id="tech-content" class="hidden">
+                 <div class="text-center mb-8">
+                    <p class="text-base text-gray-600 max-w-4xl mx-auto">A paisagem tecnológica da IA é vasta e está em constante evolução. Para um GP, compreender as ferramentas e plataformas mais utilizadas é fundamental para a tomada de decisões estratégicas, a comunicação eficaz com as equipes técnicas e a navegação bem-sucedida no ciclo de vida de um projeto de IA. Esta seção oferece uma visão geral das tecnologias mais relevantes, desde linguagens de programação até plataformas de MLOps e serviços em nuvem.</p>
+                 </div>
+                <div id="tech-nav-bar" class="flex flex-wrap justify-center gap-2 mb-8"></div>
+                <div id="tech-details"></div>
+            </div>
+        </main>
+    </div>
+
+    <div id="modal" class="modal hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4">
+        <div id="modal-content" class="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-y-auto p-6 md:p-8 fade-in">
+            <div class="flex justify-between items-center mb-4">
+                <h2 id="modal-title" class="text-2xl font-bold text-gray-800"></h2>
+                <button id="modal-close" class="text-gray-500 hover:text-gray-800 text-3xl">&times;</button>
+            </div>
+            <div id="modal-body" class="prose max-w-none text-gray-700"></div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const data = {
+                skills: {
+                    fundamental: [
+                        { id: 'risk', title: 'Gestão de Riscos', content: 'A capacidade de identificar, avaliar e mitigar riscos é crucial, especialmente os desafios únicos de IA como vieses algorítmicos e problemas de qualidade de dados. A IA auxilia na identificação proativa de riscos, transformando a gestão de riscos em uma disciplina preditiva e ética.' },
+                        { id: 'stakeholder', title: 'Gestão de Stakeholders', content: 'Identificar as partes interessadas-chave, gerenciar suas expectativas e garantir uma comunicação eficaz entre todos os envolvidos no projeto.' },
+                        { id: 'scope', title: 'Gestão de Escopo', content: 'Definir as entregas com precisão, comunicar de forma transparente os recursos alocados e estabelecer processos claros para lidar com modificações no escopo.' },
+                        { id: 'resources', title: 'Gestão de Recursos', content: 'Planejar, programar e alocar pessoas, dinheiro e tecnologia de forma otimizada. A IA atua como um "meta-gerente", automatizando a alocação e otimização de recursos.' },
+                        { id: 'budget', title: 'Gestão de Orçamento e Cronograma', content: 'Definir e monitorar orçamentos, rastrear despesas e gerenciar custos. A IA pode prever datas de término e estimar esforços para um planejamento mais preciso.' },
+                    ],
+                    technical: [
+                        { id: 'data_literacy', title: 'Alfabetização em Dados e Ciclo de Vida da IA', content: 'Compreender como os dados são obtidos, rotulados e limpos, e entender todo o ciclo de vida do projeto de Machine Learning (ML), desde a concepção até o monitoramento do modelo em produção.' },
+                        { id: 'ethics', title: 'Segurança, Privacidade e Ética em IA', content: 'Garantir que considerações éticas, como vieses e falta de transparência, sejam incorporadas em todo o ciclo de vida do projeto. O GP atua como um guardião ético.' },
+                        { id: 'agile', title: 'Metodologias Ágeis para IA', content: 'Projetos de IA exigem ciclos curtos e refinamento contínuo. É preciso estar confortável com a gestão de escopo em evolução e a priorização de iterações com base no aprendizado.' },
+                        { id: 'tools', title: 'Conhecimento de Ferramentas e Tecnologias de IA', content: 'Familiaridade com plataformas de IA e software, como PyTorch, AzureML e TensorFlow, para facilitar a comunicação e a tomada de decisão técnica.' },
+                    ],
+                    interpersonal: [
+                        { id: 'communication', title: 'Comunicação e Colaboração Interdisciplinar', content: 'Atuar como um "tradutor" entre especialistas de diferentes áreas (dados, engenharia, negócios), construindo pontes conceituais e culturais para garantir o alinhamento de todos.' },
+                        { id: 'critical_thinking', title: 'Pensamento Crítico e Resolução de Problemas', content: 'A IA otimiza a eficiência, mas a criatividade, intuição e liderança para resolver problemas complexos e lidar com a ambiguidade permanecem habilidades humanas insubstituíveis.' },
+                        { id: 'emotional_intelligence', title: 'Inteligência Emocional e Gestão da Mudança', content: 'Gerenciar equipes e stakeholders de forma eficaz através da empatia, escuta ativa e resolução de conflitos, guiando-os pelas transições que a IA traz.' },
+                        { id: 'leadership', title: 'Visão e Liderança Estratégica', content: 'Prever o impacto de longo prazo da IA nos negócios e alinhar os projetos com os objetivos organizacionais, atuando como um integrador de inteligência.' },
+                    ]
+                },
+                technologies: {
+                    languages: {
+                        title: 'Linguagens de Programação',
+                        chartData: {
+                            labels: ['Python', 'C++', 'R', 'Java', 'JavaScript', 'Julia'],
+                            datasets: [{
+                                label: 'Popularidade/Adequação para IA',
+                                data: [95, 70, 65, 60, 50, 40],
+                                backgroundColor: [
+                                    'rgba(59, 130, 246, 0.7)',
+                                    'rgba(16, 185, 129, 0.7)',
+                                    'rgba(239, 68, 68, 0.7)',
+                                    'rgba(249, 115, 22, 0.7)',
+                                    'rgba(245, 158, 11, 0.7)',
+                                    'rgba(139, 92, 246, 0.7)'
+                                ],
+                                borderColor: [
+                                    'rgba(59, 130, 246, 1)',
+                                    'rgba(16, 185, 129, 1)',
+                                    'rgba(239, 68, 68, 1)',
+                                    'rgba(249, 115, 22, 1)',
+                                    'rgba(245, 158, 11, 1)',
+                                    'rgba(139, 92, 246, 1)'
+                                ],
+                                borderWidth: 1
+                            }]
+                        },
+                        content: [
+                            { title: 'Python', text: 'A linguagem mais popular para IA e ML devido à sua sintaxe simples e vasto ecossistema de bibliotecas como TensorFlow e PyTorch. Essencial para prototipagem rápida e desenvolvimento.' },
+                            { title: 'C++', text: 'Essencial para aplicações de IA intensivas em desempenho, como sistemas em tempo real e robótica, oferecendo velocidade e controle de recursos inigualáveis.' },
+                            { title: 'R', text: 'Projetada para computação estatística e análise de dados, ideal para projetos onde o rigor estatístico é uma prioridade, com pacotes robustos para modelagem e visualização.' },
+                            { title: 'Java', text: 'Preferida para aplicações de nível empresarial em larga escala devido à sua estabilidade, escalabilidade e natureza orientada a objetos, com bibliotecas como Deeplearning4j.' },
+                            { title: 'JavaScript', text: 'Importante para integrar IA em aplicações web, permitindo a execução de código tanto no cliente (navegador) quanto no servidor (Node.js).' },
+                            { title: 'Julia', text: 'Uma linguagem emergente que combina a facilidade do Python, a velocidade do C e as capacidades estatísticas do R, promissora para computação científica.' },
+                        ]
+                    },
+                    frameworks: {
+                        title: 'Frameworks & Bibliotecas',
+                        content: [
+                            { title: 'TensorFlow', text: 'Desenvolvido pelo Google, é um padrão da indústria para construção de modelos robustos para produção, com um vasto ecossistema e suporte para escalabilidade.' },
+                            { title: 'PyTorch', text: 'Desenvolvido pelo Facebook, conhecido por sua flexibilidade e integração profunda com Python, muito popular em pesquisa e prototipagem rápida.' },
+                            { title: 'Keras', text: 'Uma API de alto nível que roda sobre outros frameworks, ideal para iniciantes e prototipagem rápida devido à sua facilidade de uso.' },
+                            { title: 'Scikit-learn', text: 'Biblioteca essencial para algoritmos de Machine Learning clássicos (classificação, regressão, clustering), pré-processamento e avaliação de modelos.' },
+                            { title: 'OpenCV', text: 'Biblioteca fundamental para projetos de Visão Computacional, com ferramentas para análise de imagem e vídeo, detecção de objetos e reconhecimento facial.' },
+                            { title: 'Transformers (Hugging Face)', text: 'Biblioteca crucial para projetos de Processamento de Linguagem Natural (NLP), oferecendo acesso a modelos pré-treinados de última geração.' },
+                        ]
+                    },
+                    mlops: {
+                        title: 'Plataformas de MLOps',
+                        content: [
+                            { title: 'MLflow', text: 'Plataforma de código aberto para gerenciar o ciclo de vida completo do ML, incluindo rastreamento de experimentos, versionamento de modelos e registro centralizado.' },
+                            { title: 'Kubeflow', text: 'Projetado para rodar nativamente no Kubernetes, torna os fluxos de trabalho de ML portáteis, escaláveis e composíveis, ideal para ambientes de contêineres.' },
+                            { title: 'Data Version Control (DVC)', text: 'Sistema de controle de versão de código aberto que estende o Git para lidar com grandes datasets e modelos de ML, garantindo reprodutibilidade.' },
+                        ]
+                    },
+                    cloud: {
+                        title: 'Serviços de IA em Nuvem',
+                        content: [
+                            { title: 'Amazon Web Services (AWS)', text: 'Oferece o Amazon SageMaker, uma plataforma abrangente de ML que cobre desde a preparação de dados até o monitoramento de modelos em produção.' },
+                            { title: 'Google Cloud Platform (GCP)', text: 'Apresenta o Vertex AI, uma plataforma unificada que simplifica o desenvolvimento e a implantação de modelos de ML tradicionais e IA generativa.' },
+                            { title: 'Microsoft Azure', text: 'Fornece o Azure Machine Learning, uma plataforma robusta com experiências de baixo código e "código-primeiro", com MLOps integrado.' },
+                        ]
+                    },
+                    generative: {
+                        title: 'IA Generativa para GPs',
+                        content: [
+                            { title: 'Otimização de Processos', text: 'A IA generativa pode ajudar a desenvolver e otimizar fluxos de trabalho, transformando esboços em planos detalhados e criando cronogramas complexos.' },
+                            { title: 'Automação Cognitiva', text: 'Auxilia na redação de comunicações para stakeholders, melhorando o tom e a clareza, e na geração de atas e resumos de reuniões.' },
+                            { title: 'Análise e Brainstorming', text: 'Pode auxiliar na identificação de riscos que não são óbvios, analisando dados e padrões, e apoiar o trabalho criativo e o planejamento estratégico.' },
+                        ]
+                    }
+                }
+            };
+
+            const skillsNav = document.getElementById('skills-nav');
+            const techNav = document.getElementById('tech-nav');
+            const skillsContent = document.getElementById('skills-content');
+            const techContent = document.getElementById('tech-content');
+            const skillsGrid = document.getElementById('skills-grid');
+            const techNavBar = document.getElementById('tech-nav-bar');
+            const techDetails = document.getElementById('tech-details');
+            const modal = document.getElementById('modal');
+            const modalContent = document.getElementById('modal-content');
+            const modalTitle = document.getElementById('modal-title');
+            const modalBody = document.getElementById('modal-body');
+            const modalClose = document.getElementById('modal-close');
+
+            let skillsRadarChartInstance = null;
+            let languagesBarChartInstance = null;
+
+            function showModal(title, content) {
+                modalTitle.textContent = title;
+                modalBody.innerHTML = `<p>${content}</p>`;
+                modal.classList.remove('hidden');
+            }
+
+            function closeModal() {
+                modal.classList.add('hidden');
+            }
+
+            modalClose.addEventListener('click', closeModal);
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    closeModal();
+                }
+            });
+
+            function renderSkills() {
+                skillsGrid.innerHTML = '';
+                const skillCategories = [
+                    { title: 'Competências Fundamentais', data: data.skills.fundamental, color: 'blue' },
+                    { title: 'Competências Técnicas e de IA', data: data.skills.technical, color: 'green' },
+                    { title: 'Habilidades Interpessoais e de Liderança', data: data.skills.interpersonal, color: 'purple' }
+                ];
+                
+                skillCategories.forEach(category => {
+                    const categoryDiv = document.createElement('div');
+                    categoryDiv.className = `bg-white p-6 rounded-xl shadow-lg border border-gray-200`;
+                    
+                    const header = document.createElement('h3');
+                    header.className = `text-xl font-bold text-gray-800 mb-4 border-b-2 border-${category.color}-500 pb-2`;
+                    header.textContent = category.title;
+                    categoryDiv.appendChild(header);
+
+                    const list = document.createElement('ul');
+                    list.className = 'space-y-3';
+                    
+                    category.data.forEach(skill => {
+                        const listItem = document.createElement('li');
+                        const button = document.createElement('button');
+                        button.className = 'w-full text-left p-3 rounded-lg hover:bg-gray-100 transition duration-200';
+                        button.innerHTML = `<span class="font-medium text-gray-700">${skill.title}</span>`;
+                        button.onclick = () => showModal(skill.title, skill.content);
+                        listItem.appendChild(button);
+                        list.appendChild(listItem);
+                    });
+
+                    categoryDiv.appendChild(list);
+                    skillsGrid.appendChild(categoryDiv);
+                });
+
+                renderSkillsRadarChart();
+            }
+
+            function renderSkillsRadarChart() {
+                if (skillsRadarChartInstance) {
+                    skillsRadarChartInstance.destroy();
+                }
+                const ctx = document.getElementById('skillsRadarChart').getContext('2d');
+                skillsRadarChartInstance = new Chart(ctx, {
+                    type: 'radar',
+                    data: {
+                        labels: ['Fundamentais', 'Técnicas', 'Interpessoais'],
+                        datasets: [{
+                            label: 'Equilíbrio de Habilidades do GP de IA',
+                            data: [
+                                data.skills.fundamental.length, 
+                                data.skills.technical.length,
+                                data.skills.interpersonal.length
+                            ],
+                            fill: true,
+                            backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                            borderColor: 'rgb(59, 130, 246)',
+                            pointBackgroundColor: 'rgb(59, 130, 246)',
+                            pointBorderColor: '#fff',
+                            pointHoverBackgroundColor: '#fff',
+                            pointHoverBorderColor: 'rgb(59, 130, 246)'
+                        }]
+                    },
+                    options: {
+                        maintainAspectRatio: false,
+                        responsive: true,
+                        elements: {
+                            line: {
+                                borderWidth: 3
+                            }
+                        },
+                        scales: {
+                            r: {
+                                angleLines: {
+                                    display: false
+                                },
+                                suggestedMin: 0,
+                                suggestedMax: 5,
+                                pointLabels: {
+                                    font: {
+                                        size: 14,
+                                        weight: '500'
+                                    }
+                                },
+                                ticks: {
+                                    display: false
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            function renderTechNav() {
+                techNavBar.innerHTML = '';
+                Object.keys(data.technologies).forEach((key, index) => {
+                    const button = document.createElement('button');
+                    button.textContent = data.technologies[key].title;
+                    button.className = 'tech-nav-button text-sm font-medium py-2 px-4 rounded-full transition';
+                    if (index === 0) button.classList.add('active');
+                    button.onclick = () => {
+                        document.querySelectorAll('.tech-nav-button').forEach(btn => btn.classList.remove('active'));
+                        button.classList.add('active');
+                        renderTechDetails(key);
+                    };
+                    techNavBar.appendChild(button);
+                });
+            }
+
+            function renderTechDetails(key) {
+                techDetails.innerHTML = '';
+                const tech = data.technologies[key];
+
+                if (key === 'languages') {
+                    const chartContainer = document.createElement('div');
+                    chartContainer.className = 'chart-container h-96 lg:h-[500px] max-w-4xl';
+                    const canvas = document.createElement('canvas');
+                    canvas.id = 'languagesBarChart';
+                    chartContainer.appendChild(canvas);
+                    techDetails.appendChild(chartContainer);
+                    renderLanguagesBarChart(tech.chartData, tech.content);
+                } else {
+                    const grid = document.createElement('div');
+                    grid.className = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6';
+                    tech.content.forEach(item => {
+                        const card = document.createElement('div');
+                        card.className = 'card bg-white p-6 rounded-xl shadow-lg border border-gray-100 flex flex-col';
+                        card.innerHTML = `
+                            <h4 class="font-bold text-lg text-gray-800">${item.title}</h4>
+                            <p class="text-gray-600 mt-2 flex-grow">${item.text}</p>
+                        `;
+                        grid.appendChild(card);
+                    });
+                    techDetails.appendChild(grid);
+                }
+            }
+
+            function renderLanguagesBarChart(chartData, contentData) {
+                if (languagesBarChartInstance) {
+                    languagesBarChartInstance.destroy();
+                }
+                const ctx = document.getElementById('languagesBarChart').getContext('2d');
+                languagesBarChartInstance = new Chart(ctx, {
+                    type: 'bar',
+                    data: chartData,
+                    options: {
+                        indexAxis: 'y',
+                        maintainAspectRatio: false,
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return context.dataset.label + ': ' + context.parsed.x;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Nível de Relevância/Popularidade'
+                                }
+                            }
+                        },
+                        onClick: (e) => {
+                           const activePoints = languagesBarChartInstance.getElementsAtEventForMode(e, 'nearest', { intersect: true }, true);
+                           if(activePoints.length) {
+                               const firstPoint = activePoints[0];
+                               const label = languagesBarChartInstance.data.labels[firstPoint.index];
+                               const data = contentData.find(d => d.title === label);
+                               if(data) {
+                                   showModal(data.title, data.text);
+                               }
+                           }
+                        }
+                    }
+                });
+            }
+
+
+            function switchTab(activeTab) {
+                if (activeTab === 'skills') {
+                    skillsNav.classList.add('active');
+                    techNav.classList.remove('active');
+                    skillsContent.classList.remove('hidden');
+                    techContent.classList.add('hidden');
+                    renderSkills();
+                } else {
+                    techNav.classList.add('active');
+                    skillsNav.classList.remove('active');
+                    techContent.classList.remove('hidden');
+                    skillsContent.classList.add('hidden');
+                    renderTechNav();
+                    renderTechDetails(Object.keys(data.technologies)[0]);
+                }
+            }
+
+            skillsNav.addEventListener('click', () => switchTab('skills'));
+            techNav.addEventListener('click', () => switchTab('tech'));
+
+            switchTab('skills');
+        });
+    </script>
+</body>
+</html>
